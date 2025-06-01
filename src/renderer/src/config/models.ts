@@ -2288,6 +2288,10 @@ export function isGeminiReasoningModel(model?: Model): boolean {
     return true
   }
 
+  if (model.type?.includes('reasoning')) {
+    return true
+  }
+
   return false
 }
 
