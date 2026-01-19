@@ -257,6 +257,33 @@ export const createBaseCallbacks = (deps: BaseCallbacksDependencies) => {
       await saveUpdatesToDB(assistantMsgId, topicId, messageUpdates, [])
       EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, { id: assistantMsgId, topicId, status })
       logger.debug('onComplete finished')
+    },
+
+    onRawData: async (content: unknown, metadata?: Record<string, any>) => {
+      if (!assistant.model || !content) {
+        return
+      }
+
+      const providerId = metadata?.providerId
+      const modelId = metadata?.modelId
+      if (providerId && providerId !== assistant.model.provider) {
+        return
+      }
+      if (modelId && modelId !== assistant.model.id) {
+        return
+      }
+
+      const rawMessages = Array.isArray(content) ? content : [content]
+
+      const updates = { raw_messages: rawMessages }
+      dispatch(
+        newMessagesActions.updateMessage({
+          topicId,
+          messageId: assistantMsgId,
+          updates
+        })
+      )
+      await saveUpdatesToDB(assistantMsgId, topicId, updates, [])
     }
   }
 }

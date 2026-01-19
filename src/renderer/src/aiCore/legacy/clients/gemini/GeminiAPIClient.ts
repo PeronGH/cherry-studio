@@ -594,7 +594,10 @@ export class GeminiAPIClient extends BaseApiClient<
     const toolCalls: FunctionCall[] = []
     let isFirstTextChunk = true
     let isFirstThinkingChunk = true
-    return () => ({
+    let rawParts: Part[] = []
+    let rawRole: Content['role'] | undefined
+    let rawModelVersion: string | undefined
+    return (transformerContext) => ({
       async transform(chunk: GeminiSdkRawChunk, controller: TransformStreamDefaultController<GenericChunk>) {
         logger.silly('chunk', chunk)
         if (typeof chunk === 'string') {
@@ -608,7 +611,14 @@ export class GeminiAPIClient extends BaseApiClient<
         if (chunk.candidates && chunk.candidates.length > 0) {
           for (const candidate of chunk.candidates) {
             if (candidate.content) {
+              if (candidate.index === 0) {
+                rawRole = rawRole ?? candidate.content.role
+                rawModelVersion = rawModelVersion ?? chunk.modelVersion
+              }
               candidate.content.parts?.forEach((part) => {
+                if (candidate.index === 0) {
+                  rawParts.push(part)
+                }
                 const text = part.text || ''
                 if (part.thought) {
                   if (isFirstThinkingChunk) {
@@ -651,6 +661,22 @@ export class GeminiAPIClient extends BaseApiClient<
             }
 
             if (candidate.finishReason) {
+              if (rawParts.length > 0 && rawRole) {
+                controller.enqueue({
+                  type: ChunkType.RAW,
+                  content: {
+                    role: rawRole,
+                    parts: rawParts
+                  },
+                  metadata: {
+                    providerId: transformerContext.provider?.id,
+                    modelId: rawModelVersion
+                  }
+                })
+                rawParts = []
+                rawRole = undefined
+                rawModelVersion = undefined
+              }
               if (candidate.groundingMetadata) {
                 controller.enqueue({
                   type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
