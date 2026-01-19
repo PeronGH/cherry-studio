@@ -257,7 +257,15 @@ export class GeminiAPIClient extends BaseApiClient<
    * @param message - The message
    * @returns The message contents
    */
-  private async convertMessageToSdkParam(message: Message): Promise<Content> {
+  private async convertMessageToSdkParam(message: Message, model: Model): Promise<Content> {
+    const rawMessages = message.raw_messages
+    if (rawMessages && message.modelId === model.id && message.model?.provider === model.provider) {
+      const candidate = Array.isArray(rawMessages) ? rawMessages[0] : rawMessages
+      if (candidate && typeof candidate === 'object' && 'parts' in candidate) {
+        return candidate as Content
+      }
+    }
+
     const role = message.role === 'user' ? 'user' : 'model'
     const { textContent, imageContents } = await this.getMessageContent(message)
     const parts: Part[] = [{ text: textContent }]
@@ -504,9 +512,9 @@ export class GeminiAPIClient extends BaseApiClient<
         } else {
           const userLastMessage = messages.pop()
           if (userLastMessage) {
-            messageContents = await this.convertMessageToSdkParam(userLastMessage)
+            messageContents = await this.convertMessageToSdkParam(userLastMessage, model)
             for (const message of messages) {
-              history.push(await this.convertMessageToSdkParam(message))
+              history.push(await this.convertMessageToSdkParam(message, model))
             }
             messages.push(userLastMessage)
           }
