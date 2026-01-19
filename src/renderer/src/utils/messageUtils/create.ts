@@ -415,7 +415,8 @@ export function resetMessage(
     useful: undefined,
     askId: undefined,
     mentions: undefined,
-    enabledMCPs: undefined
+    enabledMCPs: undefined,
+    raw_messages: undefined
     // NOTE: Add any other fields here that should be reset upon message regeneration
   }
 }

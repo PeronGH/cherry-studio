@@ -221,6 +221,9 @@ export type Message = {
   // raw data
   // TODO: add this providerMetadata to MessageBlock to save raw provider data for each block
   providerMetadata?: ProviderMetadata
+
+  // provider raw messages for round-trip reconstruction
+  raw_messages?: unknown
 }
 
 export interface Response {
